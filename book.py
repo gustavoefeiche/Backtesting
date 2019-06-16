@@ -140,7 +140,12 @@ class Book():
           self.fill(order.id, order.average, order.executed, order.status)
 
       else: #LMT order
-        if order.quantity > 0 and order.price >= self.ask.price:
+        if order.instrument == "PBR":
+          order.executed = order.quantity
+          order.average = order.price
+          order.status = Order.FILLED
+          self.fill(order.id, order.average, order.executed, order.status)
+        elif order.quantity > 0 and order.price >= self.ask.price:
           if self.ask.quantity == 0:
             order.executed = order.quantity
             order.average = self.ask.price
