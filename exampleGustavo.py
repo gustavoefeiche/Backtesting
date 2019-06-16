@@ -128,6 +128,7 @@ class GustavoStrategy(Strategy):
             if self.last_event_price:
                 ret = (event.price[3] - self.last_event_price) / self.last_event_price
                 ret = return_as_category(ret)
+                self.last_event_price = event.price[3]
 
             if self.buying:
                 if prediction[0] > ret:
