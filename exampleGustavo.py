@@ -2,6 +2,8 @@ from backtesting import evaluateHist, evaluateIntr
 from strategy import Strategy
 from order import Order
 from event import Event
+from sklearn.externals import joblib
+import numpy as np
 
 
 LONG = -1
@@ -95,10 +97,52 @@ class RSI(Strategy):
 class GustavoStrategy(Strategy):
     
     def __init__(self):
-        pass
+        self.clf = joblib.load("Gustavo/nb_clf.pickle")
+        self.last_orders = []
+        self.last_event_price = None
+        self.last_category = 0
+        self.buying = True
+
+    def return_as_category(ret):
+        if -np.inf < ret <= -0.01:
+            return 0
+        elif -0.01 < ret <= -0.005:
+            return 1
+        elif -0.005 < ret <= 0:
+            return 2
+        elif 0 < ret <= 0.005:
+            return 3
+        elif 0.005 < ret <= 0.01:
+            return 4
+        elif 0.01 < ret < np.inf:
+            return 5
 
     def push(self, event):
-        return []
+        self.last_orders.append([event.price[3]])
+
+        orders = []
+        if len(self.last_orders) > 3:
+            prediction = self.clf.predict(np.array(self.last_orders[-3:]).reshape(1, -1))
+            
+            ret = 0
+            if self.last_event_price:
+                ret = (event.price[3] - self.last_event_price) / self.last_event_price
+                ret = return_as_category(ret)
+
+            if self.buying:
+                if prediction[0] > ret:
+                    orders = [Order(event.instrument, 1, 0)]
+                else:
+                    orders = [Order(event.instrument, -1, 0), Order(event.instrument, -1, 0)]
+                    self.buying = False
+            else:
+                if prediction[0] > ret:
+                    orders = [Order(event.instrument, -1, 0)]
+                else:
+                    orders = [Order(event.instrument, 1, 0), Order(event.instrument, 1, 0)]
+                    self.buying = True
+        
+        return orders
 
 
 class MM(Strategy):
